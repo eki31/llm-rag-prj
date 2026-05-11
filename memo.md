@@ -95,3 +95,21 @@ LOGGING MODULE
 docker build --no-cache -t ai-knowledge-api .
 docker run --rm --name api-app --env-file .env -p 8000:8000 ai-knowledge-api 
 
+
+HTPPX - replace requests for asynch (improve concurrency)
+What is HTTPX?
+A modern HTTP client for Python. It handles web requests (GET, POST, etc.) and 
+is designed as a next-generation successor to the Requests library.
+Key Comparison
+Feature          Requests               HTTPX
+Execution     Synchronous only       (blocking)Sync + Async support
+HTTP Version  HTTP/1.1 only            HTTP/2 (faster/multiplexing)
+Timeouts      No default (can hang)   Strict 5s default
+Redirects     Follows by default       Manual (off by default)
+Interface        requests.Session()      httpx.Client() or AsyncClient()
+
+Why Choose HTTPX?
+Concurrency: Essential for asyncio or FastAPI projects to handle many requests simultaneously.
+Performance: HTTP/2 support reduces connection overhead.
+Safety: Fully type-annotated and enforces timeouts to prevent "hanging" scripts.
+Compatibility: Uses a nearly identical API to Requests, making migration easy.

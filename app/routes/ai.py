@@ -19,19 +19,20 @@ def health_check():
     return {"status": "healthy"}
 
 @router.post("/ask")
-def ask_question(request: QuestionRequest):
+async def ask_question(request: QuestionRequest):
 
     logger.info(f"Question received: {request.question}")
 
-    response = ask_llm(request.question)
-
+    #response = ask_llm(request.question)
+    response = await ask_llm(request.question)
     return response
 
 @router.post("/summarize")
-def summarize(request: SummarizeRequest):
+async def summarize(request: SummarizeRequest):
 
     logger.info(f"Text received: {request.text}")
 
-    response = summarize_text(request.text)
+    #response = summarize_text(request.text)
+    response = await summarize_text(request.text)
 
     return response
