@@ -5,3 +5,5 @@ fastapi
 #requests
 uvicorn
 httpx
+pytest
+pytest-asyncio
