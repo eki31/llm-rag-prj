@@ -7,3 +7,9 @@ uvicorn
 httpx
 pytest
 pytest-asyncio
+langchain
+langchain-community
+langchain-text-splitters
+chromadb
+sentence-transformers
+pypdf

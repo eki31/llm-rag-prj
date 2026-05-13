@@ -5,3 +5,6 @@ class QuestionRequest(BaseModel):
 
 class SummarizeRequest(BaseModel):
     text: str
+
+class DocumentQuestionRequest(BaseModel):
+    question: str
