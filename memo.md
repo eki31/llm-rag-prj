@@ -1,3 +1,16 @@
+*****uvicorn cmd to run*****
+fastapi dev main.py
+or
+uvicorn main:app --reload
+
+
+*****Docker cmd to run*****
+#docker build --no-cache -t ai-knowledge-api .
+#docker run --rm --name api-app --env-file .env -p 8000:8000 ai-knowledge-api
+docker run --rm --name rag-app --env-file .env -p 8000:8000 -v $(pwd)/app/uploads:/app/app/uploads -v $(pwd)/app/vector_db:/app/app/vector_db rag-api
+or 
+docker compose up
+
 Memo: Key Python Web Libraries
 1. Uvicorn (The Server)
    Role: Runs your web application.
@@ -90,10 +103,6 @@ LOGGING MODULE
  : set INFO and above will be logged into file(appended by default)
 - logging.basicConfig(level = logging.INFO, filename = 'datacamp.log', filemode = 'w')
    ; logged are overwritten everytime (def is 'a' append)
-
-*****Docker cmd to run*****
-docker build --no-cache -t ai-knowledge-api .
-docker run --rm --name api-app --env-file .env -p 8000:8000 ai-knowledge-api 
 
 
 HTPPX - replace requests for asynch (improve concurrency)

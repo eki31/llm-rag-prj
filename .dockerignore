@@ -1,1 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
 .env
+.git
+app/vector_db/
+app/uploads/
+memo.md
+README.md
+sample.env
+UNITTEST_GUIDE.md
+.gitignore
+.idea/

@@ -7,7 +7,8 @@ uvicorn
 httpx
 pytest
 pytest-asyncio
-langchain
+pytest-mock
+#langchain
 langchain-community
 langchain-text-splitters
 chromadb

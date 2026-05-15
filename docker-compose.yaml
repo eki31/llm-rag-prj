@@ -1,0 +1,18 @@
+services:
+  rag_app:
+    image: aqili31/rag-app
+    container_name: rag-api-app
+    volumes:
+      - ./app/uploads:/app/app/uploads
+      - ./app/vector_db:/app/app/vector_db
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+
+
+
+
+
+
+#docker run --rm --name rag-app --env-file .env -p 8000:8000 -v $(pwd)/app/uploads:/app/app/uploads -v $(pwd)/app/vector_db:/app/app/vector_db rag-api
