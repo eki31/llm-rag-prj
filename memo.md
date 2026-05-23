@@ -11,6 +11,9 @@ docker run --rm --name rag-app --env-file .env -p 8000:8000 -v $(pwd)/app/upload
 or 
 docker compose up
 
+****Delete vector db (when add new PDF) ****
+./app/reset_vector_db.sh
+
 Memo: Key Python Web Libraries
 1. Uvicorn (The Server)
    Role: Runs your web application.
