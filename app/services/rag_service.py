@@ -3,15 +3,33 @@ from app.services.openrouter_service import ask_llm
 from app.core.logger import logger
 
 async def ask_document(question: str):
-    logger.info("Running RAG retrieval")
+    try:
+        logger.info("Running RAG retrieval")
+        
+        if not question or not question.strip():
+            logger.warning("Empty question received")
+            return {
+                "error": "Question cannot be empty",
+                "response": None,
+                "sources": []
+            }
 
-    retriever = get_retriever()
-    results = retriever.invoke(question)
-    context = "\n\n".join(
-        [doc.page_content for doc in results]
-    )
+        retriever = get_retriever()
+        results = retriever.invoke(question)
+        
+        if not results:
+            logger.warning("No documents retrieved from vector store")
+            return {
+                "warning": "No relevant documents found",
+                "response": "I could not find relevant documents to answer your question.",
+                "sources": []
+            }
+        
+        context = "\n\n".join(
+            [doc.page_content for doc in results]
+        )
 
-    prompt = f"""
+        prompt = f"""
 You are a helpful assistant.
 Answer ONLY using the provided context.
     
@@ -24,18 +42,24 @@ Context:
 Question:
 {question}    
 """
-    response = await ask_llm(prompt)
+        response = await ask_llm(prompt)
 
-    sources = []
-    for doc in results:
-        source = {
-            "file":doc.metadata.get("source","unknown"),
-            "page":doc.metadata.get("page","unknown")
+        sources = []
+        for doc in results:
+            source = {
+                "file": doc.metadata.get("source", "unknown"),
+                "page": doc.metadata.get("page", "unknown")
+            }
+            sources.append(source)
+
+        return {
+            "response": response,
+            "sources": sources
         }
-
-        sources.append(source)
-
-    return {
-        "response" : response,
-        "sources" : sources
-    }
+    except Exception as e:
+        logger.error(f"Error in ask_document: {str(e)}", exc_info=True)
+        return {
+            "error": f"Failed to process question: {str(e)}",
+            "response": None,
+            "sources": []
+        }
