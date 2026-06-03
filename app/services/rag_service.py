@@ -16,6 +16,18 @@ async def ask_document(question: str):
 
         retriever = get_retriever()
         results = retriever.invoke(question)
+        #Metadata deduplication (remove duplicate pages/files)
+        unique_results = []
+        seen_sources = set()
+
+        for doc in results:
+            source_key = (doc.metadata.get("source"), doc.metadata.get("page"))
+
+            if source_key not in seen_sources:
+                seen_sources.add(source_key)
+                unique_results.append(doc)
+
+        results = unique_results
         
         if not results:
             logger.warning("No documents retrieved from vector store")
