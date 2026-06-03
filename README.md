@@ -1,352 +1,142 @@
+# AI Knowledge Assistant API
 
-# Phase 1 Project : AI Knowledge Assistant API
+A production-ready AI backend with **LLM integration** (Phase 1) and **Retrieval-Augmented Generation (RAG)** capabilities (Phase 2).
 
-A production-style AI backend API built with **FastAPI**, integrated with **OpenRouter LLM APIs**, containerized using **Docker**, and enhanced with asynchronous request handling, structured logging, and unit testing.
-
-This project was built as part of my MLOps learning roadmap to strengthen backend engineering, API development, Docker, and production engineering fundamentals before progressing into RAG systems and Kubernetes deployment.
-
----
-
-# Features
-
-## Core Features
-
-### Health Check Endpoint
-Simple health endpoint for service availability verification.
-
-```http
-GET /health
-```
-
-Response:
-
-```json
-{
-  "status": "healthy"
-}
-```
+**Phase 1**: Core API, OpenRouter LLM integration, async patterns
+**Phase 2**: Document ingestion, vector embeddings, grounded responses
 
 ---
 
-### Ask AI Endpoint
-Send a question to an LLM through OpenRouter.
+## Features
 
-```http
-POST /ask
+### Phase 1: Direct LLM Query
+- `GET /health` - Health check
+- `POST /ask` - Query LLM directly
+- `POST /summarize` - Summarize text
+
+### Phase 2: Document QA (RAG)
+- `POST /load-docs` - Ingest PDFs into vector database
+- `POST /ask-doc` - Query documents with grounded responses + sources
+
+---
+
+## Tech Stack
+
+| Phase 1 | Phase 2 |
+|---------|---------|
+| FastAPI, Uvicorn | LangChain, ChromaDB |
+| HTTPX (async) | sentence-transformers |
+| Pydantic | PyPDF |
+| Docker, Pytest | OpenRouter API |
+
+---
+
+## Architecture
+
 ```
+Phase 1: Direct LLM Query
+Client → FastAPI Routes → Service Layer → OpenRouter → Response
 
-Request:
-
-```json
-{
-  "question": "Explain Kubernetes simply"
-}
-```
-
-Response:
-
-```json
-{
-  "answer": "Kubernetes is a platform used to manage containers..."
-}
+Phase 2: RAG Pipeline
+Documents → Loader → Chunker → Embeddings → ChromaDB (persistent)
+Question → Retriever → LLM → Answer + Sources
 ```
 
 ---
 
-### Summarize Endpoint
-Summarizes input text using prompt engineering logic handled by the backend.
+## Quick Start
 
-```http
-POST /summarize
+### Setup
+```bash
+# Clone and install
+git clone <repo>
+cd ai-knowledge-api
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# Configure
+echo "OPENROUTER_API_KEY=your_key" > .env
+echo "OPENROUTER_MODEL=openai/gpt-4o-mini" >> .env
 ```
 
-Request:
+### Run
+```bash
+# From app directory
+cd app
+uvicorn main:app --reload
 
-```json
-{
-  "text": "Docker is a containerization platform..."
-}
+# Access Swagger UI
+http://localhost:8000/docs
 ```
 
-Response:
+### Phase 2 Usage
+```bash
+# 1. Add PDFs to app/uploads/
 
-```json
-{
-  "answer": "Docker packages applications into portable containers."
-}
-```
+# 2. Ingest documents
+curl -X POST http://localhost:8000/load-docs
 
----
-
-# Tech Stack
-
-- **Python**
-- **FastAPI**
-- **Uvicorn**
-- **OpenRouter API**
-- **HTTPX (async requests)**
-- **Pydantic**
-- **Docker**
-- **Pytest**
-- **Python Dotenv**
-
----
-
-# Architecture
-
-```text
-Client
-   ↓
-FastAPI Routes
-   ↓
-Validation (Pydantic)
-   ↓
-Service Layer
-   ↓
-OpenRouter API
-   ↓
-Response Formatter
-   ↓
-JSON Response
+# 3. Query documents
+curl -X POST http://localhost:8000/ask-doc \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Your question here?"}'
 ```
 
 ---
 
-# Project Structure
+## Key Features Implemented
 
-```text
+✅ **Asynchronous API** - HTTPX AsyncClient for non-blocking requests
+✅ **Error Handling** - Graceful degradation, detailed logging
+✅ **RAG System** - Document ingestion, semantic search, grounded responses
+✅ **Vector Database** - Persistent ChromaDB storage
+✅ **Source Attribution** - Know which documents were used
+✅ **Production Ready** - Structured logging, unit testing, Docker support
+
+---
+
+## Learning Outcomes
+
+**Phase 1**: FastAPI, async patterns, API design, Docker, testing
+**Phase 2**: RAG systems, embeddings, vector databases, semantic search, LLM pipelines
+
+---
+
+## Project Structure
+
+```
 ai-knowledge-api/
-│
 ├── app/
-│   ├── main.py
-│   │
-│   ├── routes/
-│   │   └── ai.py
-│   │
-│   ├── services/
-│   │   ├── openrouter_service.py
-│   │   └── response_formatter.py
-│   │
-│   ├── models/
-│   │   └── schemas.py
-│   │
-│   └── core/
-│       ├── config.py
-│       └── logger.py
-│
-├── tests/
-│   ├── test_health.py
-│   └── test_ask.py
-│
-├── .env
+│   ├── routes/          (API endpoints)
+│   ├── services/        (business logic)
+│   ├── rag/            (RAG components)
+│   ├── models/         (Pydantic schemas)
+│   └── core/           (config, logging)
 ├── requirements.txt
 ├── Dockerfile
-└── README.md
+└── README.md           (detailed docs)
 ```
 
 ---
 
-# Key Engineering Concepts Implemented
+## Troubleshooting
 
-## 1. Response Formatting
-Implemented an abstraction layer to normalize raw LLM responses into a cleaner API response format.
-
-Instead of exposing raw vendor-specific JSON, the API returns structured outputs.
-
-Example:
-
-Before:
-
-```json
-{
-  "choices": [
-    {
-      "message": {
-        "content": "Docker explanation"
-      }
-    }
-  ]
-}
-```
-
-After:
-
-```json
-{
-  "answer": "Docker explanation"
-}
-```
-
-This improves maintainability and vendor portability.
+| Issue | Solution |
+|-------|----------|
+| PDF not loading | Ensure PDFs are in `app/uploads/`, call `/load-docs` first |
+| Empty vector store | Run `/load-docs` endpoint to ingest documents |
+| No documents found | Verify `app/vector_db/chroma.sqlite3` exists |
 
 ---
 
-## 2. Asynchronous API Requests
-Implemented asynchronous external API requests using **HTTPX AsyncClient**.
+## Future Roadmap
 
-Benefits:
-
-- Better concurrency
-- Improved scalability
-- Non-blocking request handling
-- More production-ready architecture
+- [ ] Multi-document type support (Word, Excel, etc.)
+- [ ] Hybrid search (keyword + semantic)
+- [ ] API authentication
+- [ ] Kubernetes deployment
+- [ ] Monitoring (Prometheus/Grafana)
 
 ---
 
-## 3. Structured Logging
-Implemented logging for:
-
-- incoming requests
-- OpenRouter API calls
-- response status tracking
-- error debugging
-
-Example logs:
-
-```text
-INFO - Question received
-INFO - Sending request to OpenRouter
-INFO - Success: 200
-```
-
----
-
-## 4. Error Handling
-Implemented graceful error handling for:
-
-- request timeout
-- invalid API responses
-- HTTP errors
-- unexpected failures
-
-This prevents application crashes and improves reliability.
-
----
-
-## 5. Unit Testing
-Implemented endpoint testing using **Pytest** and mocking.
-
-Tests include:
-
-- health endpoint validation
-- ask endpoint validation
-
-Mocking is used to avoid real API calls during tests.
-
----
-
-# Running Locally
-
-## Clone repository
-
-```bash
-git clone <your-repo-url>
-cd ai-knowledge-api
-```
-
----
-
-## Create virtual environment
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
----
-
-## Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Configure environment variables
-
-Create `.env`
-
-```env
-OPENROUTER_API_KEY=your_api_key
-OPENROUTER_MODEL=openai/gpt-4o-mini
-```
-
----
-
-## Run server
-
-```bash
-uvicorn app.main:app --reload
-```
-
-Swagger UI:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
----
-
-# Run Tests
-
-```bash
-pytest
-```
-
----
-
-# Learning Outcomes
-
-Through this project, I practiced:
-
-- Backend API development
-- FastAPI fundamentals
-- REST API design
-- Asynchronous programming
-- Docker containerization
-- Structured logging
-- Error handling
-- Unit testing
-- Production-style project structure
-
----
-
-# Future Improvements
-
-Planned enhancements:
-
-- API authentication
-- Rate limiting
-- Request tracing / request IDs
-- CI/CD pipeline
-- Kubernetes deployment
-- RAG integration
-- Monitoring with Prometheus/Grafana
-
-
-# Phase 2 Project : Production-style RAG System.
-
-RAG flow
-
-PDF Upload
-      ↓
-Document Loader
-      ↓
-Text Splitter
-(chunking)
-      ↓
-Embedding Model
-      ↓
-ChromaDB
-(store vectors)
-      ↓
-Retriever
-      ↓
-Question
-      ↓
-Retrieved Context
-      ↓
-OpenRouter LLM
-      ↓
-Answer + Sources
+For detailed documentation, see [README.md](README_comprehensive.md)
