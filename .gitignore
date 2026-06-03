@@ -2,3 +2,6 @@
 .env
 __pycache__/
 .idea
+app/vector_db/
+app/uploads/
+.cache
