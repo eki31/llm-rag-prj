@@ -3,7 +3,6 @@ fastapi dev main.py
 or
 uvicorn main:app --reload
 
-
 *****Docker cmd to run*****
 #docker build --no-cache -t ai-knowledge-api .
 #docker run --rm --name api-app --env-file .env -p 8000:8000 ai-knowledge-api
