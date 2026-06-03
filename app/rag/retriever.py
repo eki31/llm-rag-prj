@@ -30,7 +30,14 @@ def get_retriever():
         else:
             logger.info(f"Vector store loaded with {doc_count} documents")
 
-        retriever_instance = vector_store.as_retriever(search_kwargs={"k": 5})
+        retriever_instance = vector_store.as_retriever(
+            search_type="mmr",
+            search_kwargs={
+                "k": 5,
+                "fetch_k": 15,
+                "lambda_mult": 0.7
+            }
+        )
         logger.info("Retriever initialized successfully")
         
         return retriever_instance
