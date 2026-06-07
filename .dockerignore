@@ -2,6 +2,13 @@
 .cache
 app/uploads/
 __pycache__/
-.idea
+.idea/
 .venv/
 app/vector_db/
+.pytest_cache/
+.git
+memo.md
+README.md
+sample.env
+UNITTEST_GUIDE.md
+.gitignore

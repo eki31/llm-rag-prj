@@ -5,3 +5,4 @@ __pycache__/
 app/vector_db/
 app/uploads/
 .cache
+.pytest_cache/
