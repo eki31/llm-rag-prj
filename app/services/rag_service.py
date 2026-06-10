@@ -1,7 +1,9 @@
+import json
 from app.rag.retriever import get_retriever
 from app.services.openrouter_service import ask_llm
 from app.core.logger import logger
 from app.core.memory import conversation_memory
+from app.core.cache import redis_client
 
 async def ask_document(question: str):
     try:
@@ -14,6 +16,11 @@ async def ask_document(question: str):
                 "response": None,
                 "sources": []
             }
+
+        cache_key = f"question: {question}"
+        cached_answer = redis_client.get(cache_key)
+        if cached_answer:
+            return { "response": {"answer": cached_answer}, "cached":True}
 
         retriever = get_retriever()
         results = retriever.invoke(question)
@@ -72,6 +79,8 @@ Question:
                 "page": doc.metadata.get("page", "unknown")
             }
             sources.append(source)
+
+        redis_client.setex(cache_key, 3600, json.dumps(response))
 
         return {
             "response": response,

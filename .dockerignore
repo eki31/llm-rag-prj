@@ -10,5 +10,4 @@ app/vector_db/
 memo.md
 README.md
 sample.env
-UNITTEST_GUIDE.md
 .gitignore
