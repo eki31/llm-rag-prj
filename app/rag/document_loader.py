@@ -20,3 +20,13 @@ def load_documents():
     logger.info(f"Loaded {len(documents)} document pages")
 
     return documents
+
+def load_single_document(pdf_path: str):
+    """Load a single PDF document from the specified path."""
+    logger.info(f"loading {pdf_path}")
+
+    loader = PyPDFLoader(pdf_path)
+    documents = loader.load()
+    logger.info(f"loaded {len(documents)} pages")
+
+    return documents

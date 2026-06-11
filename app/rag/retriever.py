@@ -44,3 +44,9 @@ def get_retriever():
     except Exception as e:
         logger.error(f"Failed to initialize retriever: {str(e)}")
         raise
+
+def reset_retriever():
+    """Reset the retriever instance to force reload on next access."""
+    global retriever_instance
+    retriever_instance = None
+    logger.info("Retriever instance reset")
