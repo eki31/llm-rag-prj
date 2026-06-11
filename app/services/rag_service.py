@@ -20,7 +20,7 @@ async def ask_document(question: str):
         cache_key = f"question: {question}"
         cached_answer = redis_client.get(cache_key)
         if cached_answer:
-            return { "response": {"answer": cached_answer}, "cached":True}
+            return {"response": {cached_answer}, "cached": True}
 
         retriever = get_retriever()
         results = retriever.invoke(question)
