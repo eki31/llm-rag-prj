@@ -16,3 +16,4 @@ langchain-huggingface
 langchain-chroma
 redis>=5.0.0
 python-multipart
+prometheus-client

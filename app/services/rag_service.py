@@ -4,9 +4,12 @@ from app.services.openrouter_service import ask_llm
 from app.core.logger import logger
 from app.core.memory import conversation_memory
 from app.core.cache import redis_client
+from app.core.metrics import RAG_REQUEST_COUNT, CACHE_HITS, CACHE_MISSES, OPENROUTER_CALLS
+
 
 async def ask_document(question: str):
     try:
+        RAG_REQUEST_COUNT.inc()
         logger.info("Running RAG retrieval")
         
         if not question or not question.strip():
@@ -20,7 +23,9 @@ async def ask_document(question: str):
         cache_key = f"question: {question}"
         cached_answer = redis_client.get(cache_key)
         if cached_answer:
+            CACHE_HITS.inc()
             return {"response": {cached_answer}, "cached": True}
+        CACHE_MISSES.inc()
 
         retriever = get_retriever()
         results = retriever.invoke(question)
@@ -67,6 +72,8 @@ Context:
 Question:
 {question}    
 """
+
+        OPENROUTER_CALLS.inc()
         response = await ask_llm(prompt)
 
         conversation_memory.append(f"User: {question}")

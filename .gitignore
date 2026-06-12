@@ -6,3 +6,5 @@ app/vector_db/
 app/uploads/
 .cache
 .pytest_cache/
+prometheus-data
+grafana-data

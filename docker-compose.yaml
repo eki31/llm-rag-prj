@@ -1,7 +1,6 @@
 services:
   rag_app:
     image: aqili31/rag-app
-    container_name: rag-api-app
     volumes:
       - ./app/uploads:/app/app/uploads
       - ./app/vector_db:/app/app/vector_db
@@ -11,11 +10,30 @@ services:
       - 8000:8000
     depends_on:
       - redis
+      - prometheus
+
   redis:
     image: redis:alpine
-    container_name: rag-redis
     ports:
       - "6379:6379"
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - rag-grafana-storage:/var/lib/grafana
+
+volumes:
+  rag-grafana-storage:
+    driver: local
 
 
 

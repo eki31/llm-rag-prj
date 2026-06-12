@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 
 from app.services.ingest_service import ingest_documents
+from app.core.metrics import DOCUMENT_UPLOADS
 
 router = APIRouter()
 
@@ -20,6 +21,9 @@ async def upload_file(background_tasks: BackgroundTasks ,file: UploadFile = File
 
     with open(file_path,"wb") as buffer:
         buffer.write(await file.read())
+
+    #metrics count
+    DOCUMENT_UPLOADS.inc()
 
     #trigger ingestion in background for this specific file
     background_tasks.add_task(ingest_documents, safe_name)
