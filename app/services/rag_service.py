@@ -21,10 +21,13 @@ async def ask_document(question: str):
             }
 
         cache_key = f"question: {question}"
-        cached_answer = redis_client.get(cache_key)
-        if cached_answer:
-            CACHE_HITS.inc()
-            return {"response": {cached_answer}, "cached": True}
+        cached_payload = redis_client.get(cache_key)
+        if cached_payload:
+            cached = json.loads(cached_payload)
+            # Entries written before sources were cached hold only the answer; treat them as a miss
+            if isinstance(cached, dict) and "response" in cached:
+                CACHE_HITS.inc()
+                return {**cached, "cached": True}
         CACHE_MISSES.inc()
 
         retriever = get_retriever()
@@ -87,12 +90,16 @@ Question:
             }
             sources.append(source)
 
-        redis_client.setex(cache_key, 3600, json.dumps(response))
-
-        return {
+        result = {
             "response": response,
             "sources": sources
         }
+
+        # Don't cache failed LLM calls, or the error would be served for the next hour
+        if "error" not in response:
+            redis_client.setex(cache_key, 3600, json.dumps(result))
+
+        return result
     except Exception as e:
         logger.error(f"Error in ask_document: {str(e)}", exc_info=True)
         return {
