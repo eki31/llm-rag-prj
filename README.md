@@ -135,7 +135,7 @@ ai-knowledge-api/
 - [ ] Hybrid search (keyword + semantic)
 - [ ] API authentication
 - [ ] Kubernetes deployment
-- [ ] Monitoring (Prometheus/Grafana)
+- [x] Monitoring (Prometheus/Grafana)
 
 ---
 

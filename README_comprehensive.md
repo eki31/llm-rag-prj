@@ -232,12 +232,18 @@ Answer + Source Metadata
 ```text
 ai-knowledge-api/
 │
+├── .github/
+│   └── workflows/
+│       └── ci.yml              (Runs the test suite on pull requests and pushes to main)
+│
 ├── app/
-│   ├── main.py
+│   ├── main.py                 (App setup, metrics middleware, retriever warm-up at startup)
 │   │
 │   ├── routes/
 │   │   ├── ai.py              (Phase 1: /ask, /summarize, /health)
-│   │   └── rag.py             (Phase 2: /load-docs, /ask-doc)
+│   │   ├── rag.py             (Phase 2: /load-docs, /ask-doc)
+│   │   ├── upload.py          (/upload)
+│   │   └── metrics.py         (/metrics for Prometheus)
 │   │
 │   ├── services/
 │   │   ├── openrouter_service.py
@@ -250,30 +256,36 @@ ai-knowledge-api/
 │   │   ├── chunker.py          (Text splitting)
 │   │   ├── embeddings.py       (Embedding model)
 │   │   ├── vector_store.py     (ChromaDB storage)
-│   │   ├── retriever.py        (Vector retrieval)
-│   │   └── vector_db/          (Persistent ChromaDB)
-│   │       └── chroma.sqlite3
+│   │   └── retriever.py        (Vector retrieval)
 │   │
 │   ├── models/
 │   │   └── schemas.py
 │   │
 │   ├── core/
 │   │   ├── config.py
-│   │   └── logger.py
+│   │   ├── logger.py
+│   │   ├── cache.py            (Optional Redis answer cache)
+│   │   ├── memory.py           (Conversation memory)
+│   │   └── metrics.py          (Prometheus metrics)
 │   │
-│   ├── uploads/                (Phase 2: PDF input directory)
+│   ├── uploads/                (Phase 2: PDF input directory, runtime data)
+│   ├── vector_db/              (Phase 2: persistent ChromaDB, runtime data)
 │   └── tests/
 │       ├── __init__.py
 │       ├── test_health.py
 │       ├── test_ask.py
-│       ├── test_loader.py      (Phase 2: RAG pipeline test)
-│       └── test_rag.py         (Phase 2: RAG endpoint test)
+│       ├── test_rag.py         (Phase 2: RAG endpoint test)
+│       ├── test_rag_cache.py   (Redis cache behavior for /ask-doc)
+│       ├── test_startup.py     (Retriever warm-up at startup)
+│       └── test_loader.py      (Manual script that rebuilds the vector DB, not run by pytest)
 │
-├── .env
+├── monitoring/                 (Grafana dashboard)
+├── prometheus.yml
+├── docker-compose.yaml
+├── sample.env
 ├── requirements.txt
 ├── Dockerfile
 ├── memo.md
-├── reset_vector_db.sh
 └── README.md
 ```
 
@@ -398,11 +410,13 @@ pip install -r requirements.txt
 
 ## Configure environment variables
 
-Create `.env`
+A local `.env` is not loaded automatically, so export the variables in your shell.
+Docker Compose loads `.env` for you (copy `sample.env` to `.env` first).
 
-```env
-OPENROUTER_API_KEY=your_api_key
-OPENROUTER_MODEL=openai/gpt-4o-mini
+```bash
+export OPENROUTER_API_KEY=your_api_key
+export OPENROUTER_MODEL=openai/gpt-4o-mini
+export REDIS_HOST=localhost   # optional; answers still work without Redis, just uncached
 ```
 
 ---
@@ -424,8 +438,12 @@ http://127.0.0.1:8000/docs
 # Run Tests
 
 ```bash
-pytest
+# From the repository root
+python -m pytest app/tests
 ```
+
+The suite needs no uploads, vector DB, Redis or API key.
+GitHub Actions runs it on every pull request and on pushes to `main`.
 
 ---
 
@@ -481,9 +499,10 @@ Through Phase 2, I practiced:
 
 ## Long-term (Production Deployment)
 
-- [ ] CI/CD pipeline with GitHub Actions
+- [x] CI with GitHub Actions (tests on pull requests and pushes to `main`)
+- [ ] Continuous deployment
 - [ ] Kubernetes deployment
-- [ ] Monitoring with Prometheus/Grafana
+- [x] Monitoring with Prometheus/Grafana
 - [ ] Distributed vector database (Qdrant, Milvus)
 - [ ] Fine-tuned embedding models
 - [ ] Multi-user support with document access control
@@ -650,9 +669,6 @@ If documents disappear after restart:
 
 ```bash
 # Delete vector database
-./app/reset_vector_db.sh
-
-# Or manually
 rm -rf app/vector_db/*
 ```
 
