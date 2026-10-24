@@ -10,7 +10,7 @@ It also has a Redis answer cache and Prometheus metrics, with a Grafana dashboar
 
 ## Layout
 
-- `app/main.py` - FastAPI app, router registration, and the metrics middleware.
+- `app/main.py` - FastAPI app, router registration, the metrics middleware, and the startup warm-up that loads the retriever before serving.
 - `app/routes/` - HTTP endpoints (`ai.py`, `rag.py`, `upload.py`, `metrics.py`). Keep them thin.
 - `app/services/` - Business logic: OpenRouter calls, RAG answering, ingestion, response formatting.
 - `app/rag/` - RAG building blocks: loader, chunker, embeddings, vector store, retriever.
