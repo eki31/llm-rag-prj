@@ -1,0 +1,81 @@
+# AGENTS.md
+
+Project instructions for coding agents working on ai-knowledge-api.
+CLAUDE.md is a symlink to this file, so edit AGENTS.md only.
+
+## What this is
+
+A FastAPI backend that answers questions with an LLM through OpenRouter, plus a RAG pipeline over uploaded PDFs.
+It also has a Redis answer cache and Prometheus metrics, with a Grafana dashboard.
+
+## Layout
+
+- `app/main.py` - FastAPI app, router registration, the metrics middleware, and the startup warm-up that loads the retriever before serving.
+- `app/routes/` - HTTP endpoints (`ai.py`, `rag.py`, `upload.py`, `metrics.py`). Keep them thin.
+- `app/services/` - Business logic: OpenRouter calls, RAG answering, ingestion, response formatting.
+- `app/rag/` - RAG building blocks: loader, chunker, embeddings, vector store, retriever.
+- `app/core/` - Config, logger, Redis cache, conversation memory, Prometheus metrics.
+- `app/models/schemas.py` - Pydantic request and response models.
+- `app/tests/` - Pytest tests.
+- `monitoring/`, `prometheus.yml` - Observability config.
+
+Request flow: route -> service -> (rag components | OpenRouter) -> response.
+Put new logic in a service, not in a route.
+
+## Commands
+
+Run everything from the repository root.
+Imports use the `app.` package prefix, and paths like `app/uploads` and `app/vector_db` are relative to the root.
+
+```bash
+# Setup (Python 3.12, matching the Dockerfile)
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+
+# Run the API locally
+uvicorn app.main:app --reload        # Swagger UI at http://localhost:8000/docs
+
+# Run the full stack (API, Redis, Prometheus, Grafana)
+docker compose up
+
+# Tests
+python -m pytest app/tests
+
+# Tests without a local venv, using the built image with the current code mounted
+docker run --rm -v "$PWD/app:/app/app" aqili31/rag-app python -m pytest app/tests
+```
+
+The test suite runs in a few seconds and needs no uploads, vector DB, Redis or API key.
+CI (`.github/workflows/ci.yml`) runs it on every pull request and on pushes to `main`.
+
+There is no linter or formatter configured yet.
+
+## Configuration
+
+- Settings come from environment variables `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (see `sample.env`).
+- `load_dotenv()` is commented out in `app/core/config.py`, so a local `.env` is not loaded automatically.
+  Docker Compose loads it via `env_file`; for local runs, export the variables first.
+- Never commit `.env` or print the API key.
+
+## Gotchas
+
+- Redis is optional. `REDIS_HOST` defaults to `redis`, which only resolves inside Docker Compose; set `REDIS_HOST=localhost` for local runs.
+  If Redis is unreachable, `/ask-doc` still answers without the cache and Redis is skipped for 30 seconds before retrying.
+  Always go through `cache_get` and `cache_set` in `app/core/cache.py`, never `redis_client` directly.
+- `app/uploads/` and `app/vector_db/` are runtime data, git-ignored and mounted as Docker volumes. Don't commit them.
+- The Docker image installs CPU-only PyTorch on purpose to keep it small. Don't switch it to the default CUDA build.
+- The embedding model `all-MiniLM-L6-v2` is downloaded into the image at build time, and `HF_HUB_OFFLINE=1` stops runtime downloads.
+  If you change the model in `app/rag/embeddings.py`, update the download step in the `Dockerfile` too, or the container will fail to load it.
+
+## Testing conventions
+
+- Tests use FastAPI's `TestClient` and mock the service function where the route imports it, e.g. `@patch("app.routes.rag.ask_document", new_callable=AsyncMock)`.
+- Tests must not call OpenRouter, Redis or the vector store for real. Mock them.
+- Add a test for every new endpoint and for every bug fix.
+- `app/tests/test_loader.py` is a manual script that rebuilds the vector DB (`python -m app.tests.test_loader`). Keep its code under `if __name__ == "__main__":` so pytest never runs it.
+
+## Files to leave alone
+
+- `memo.md` holds the owner's personal notes. Don't edit it unless asked.
+- `README_comprehensive.md` is long-form documentation; update it only when the change affects what it describes.
