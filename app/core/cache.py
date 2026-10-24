@@ -2,6 +2,8 @@ import os
 import time
 
 import redis
+from redis.backoff import NoBackoff
+from redis.retry import Retry
 
 from app.core.logger import logger
 
@@ -16,7 +18,9 @@ redis_client = redis.Redis(
     port=REDIS_PORT,
     decode_responses=True,
     socket_connect_timeout=1,
-    socket_timeout=1
+    socket_timeout=1,
+    # No retries: redis-py retries 10 times by default, blocking the event loop for seconds when Redis is down
+    retry=Retry(NoBackoff(), 0)
 )
 
 _unavailable_until = 0.0

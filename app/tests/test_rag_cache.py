@@ -1,4 +1,6 @@
 import json
+import socket
+import threading
 from unittest.mock import patch, AsyncMock, MagicMock
 
 import pytest
@@ -122,3 +124,37 @@ def test_skips_redis_for_a_while_after_a_failure(mock_ask_llm, mock_get_retrieve
 
     # Only the first lookup reaches Redis; the rest are skipped during the backoff
     assert down.calls == 1
+
+
+def test_unreachable_redis_is_tried_only_once():
+    # A server that accepts each connection and closes it at once, like a Redis that keeps dropping us
+    server = socket.create_server(("127.0.0.1", 0))
+    attempts = 0
+    stop = threading.Event()
+
+    def drop_connections():
+        nonlocal attempts
+        server.settimeout(0.1)
+        while not stop.is_set():
+            try:
+                conn, _ = server.accept()
+            except TimeoutError:
+                continue
+            attempts += 1
+            conn.close()
+
+    thread = threading.Thread(target=drop_connections)
+    thread.start()
+    pool_kwargs = cache.redis_client.connection_pool.connection_kwargs
+    try:
+        with patch.dict(pool_kwargs, {"host": "127.0.0.1", "port": server.getsockname()[1]}):
+            cache.redis_client.connection_pool.reset()
+            assert cache.cache_get("question: What is pod?") is None
+    finally:
+        cache.redis_client.connection_pool.reset()
+        stop.set()
+        thread.join()
+        server.close()
+
+    # Retrying would block the event loop for seconds while Redis is down
+    assert attempts == 1
