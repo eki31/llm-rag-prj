@@ -54,16 +54,16 @@ cd ai-knowledge-api
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-# Configure
-echo "OPENROUTER_API_KEY=your_key" > .env
-echo "OPENROUTER_MODEL=openai/gpt-4o-mini" >> .env
+# Configure (a local .env is not loaded automatically, so export the variables)
+export OPENROUTER_API_KEY=your_key
+export OPENROUTER_MODEL=openai/gpt-4o-mini
+export REDIS_HOST=localhost   # optional; answers still work without Redis, just uncached
 ```
 
 ### Run
 ```bash
-# From app directory
-cd app
-uvicorn main:app --reload
+# From the repository root
+uvicorn app.main:app --reload
 
 # Access Swagger UI
 http://localhost:8000/docs
