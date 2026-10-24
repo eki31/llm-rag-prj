@@ -65,6 +65,8 @@ There is no linter or formatter configured yet.
 - The README's "cd app; uvicorn main:app" instruction is outdated and breaks the `app.` imports. Use the root command above.
 - `app/uploads/` and `app/vector_db/` are runtime data, git-ignored and mounted as Docker volumes. Don't commit them.
 - The Docker image installs CPU-only PyTorch on purpose to keep it small. Don't switch it to the default CUDA build.
+- The embedding model `all-MiniLM-L6-v2` is downloaded into the image at build time, and `HF_HUB_OFFLINE=1` stops runtime downloads.
+  If you change the model in `app/rag/embeddings.py`, update the download step in the `Dockerfile` too, or the container will fail to load it.
 
 ## Testing conventions
 

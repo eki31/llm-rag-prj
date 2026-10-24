@@ -8,6 +8,13 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Bake the embedding model into the image so containers don't download it on the first request.
+# The path matches cache_folder=".cache" in app/rag/embeddings.py (relative to WORKDIR /app).
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', cache_folder='/app/.cache')"
+
+# The model is already on disk, so never contact the Hugging Face Hub at runtime
+ENV HF_HUB_OFFLINE=1
+
 COPY . .
 
 RUN mkdir -p app/uploads
