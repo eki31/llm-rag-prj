@@ -46,7 +46,8 @@ python -m pytest app/tests
 docker run --rm -v "$PWD/app:/app/app" aqili31/rag-app python -m pytest app/tests
 ```
 
-The full test suite takes about 6 minutes on the owner's laptop.
+The test suite runs in a few seconds and needs no uploads, vector DB, Redis or API key.
+CI (`.github/workflows/ci.yml`) runs it on every pull request and on pushes to `main`.
 
 There is no linter or formatter configured yet.
 
@@ -73,6 +74,7 @@ There is no linter or formatter configured yet.
 - Tests use FastAPI's `TestClient` and mock the service function where the route imports it, e.g. `@patch("app.routes.rag.ask_document", new_callable=AsyncMock)`.
 - Tests must not call OpenRouter, Redis or the vector store for real. Mock them.
 - Add a test for every new endpoint and for every bug fix.
+- `app/tests/test_loader.py` is a manual script that rebuilds the vector DB (`python -m app.tests.test_loader`). Keep its code under `if __name__ == "__main__":` so pytest never runs it.
 
 ## Files to leave alone
 
