@@ -1,12 +1,22 @@
 import json
 from unittest.mock import patch, AsyncMock, MagicMock
 
+import pytest
+import redis
 from fastapi.testclient import TestClient
 from langchain_core.documents import Document
 
+from app.core import cache
 from app.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def reset_cache_backoff():
+    cache._unavailable_until = 0.0
+    yield
+    cache._unavailable_until = 0.0
 
 
 class FakeRedis:
@@ -33,7 +43,7 @@ def fake_retriever():
 def test_cache_hit_returns_same_shape_as_fresh_answer(mock_ask_llm, mock_get_retriever):
     mock_ask_llm.return_value = {"answer": "Pods are containers"}
 
-    with patch("app.services.rag_service.redis_client", FakeRedis()):
+    with patch("app.core.cache.redis_client", FakeRedis()):
         first = client.post("/ask-doc", json={"question": "What is pod?"})
         second = client.post("/ask-doc", json={"question": "What is pod?"})
 
@@ -49,25 +59,66 @@ def test_cache_hit_returns_same_shape_as_fresh_answer(mock_ask_llm, mock_get_ret
 @patch("app.services.rag_service.ask_llm", new_callable=AsyncMock)
 def test_failed_llm_call_is_not_cached(mock_ask_llm, mock_get_retriever):
     mock_ask_llm.return_value = {"error": "API request failed"}
-    redis = FakeRedis()
+    fake_redis = FakeRedis()
 
-    with patch("app.services.rag_service.redis_client", redis):
+    with patch("app.core.cache.redis_client", fake_redis):
         response = client.post("/ask-doc", json={"question": "What is pod?"})
 
     assert response.json()["response"] == {"error": "API request failed"}
-    assert redis.store == {}
+    assert fake_redis.store == {}
 
 
 @patch("app.services.rag_service.get_retriever", side_effect=fake_retriever)
 @patch("app.services.rag_service.ask_llm", new_callable=AsyncMock)
 def test_old_format_cache_entry_is_treated_as_miss(mock_ask_llm, mock_get_retriever):
     mock_ask_llm.return_value = {"answer": "Pods are containers"}
-    redis = FakeRedis()
-    redis.store["question: What is pod?"] = json.dumps({"answer": "stale"})
+    fake_redis = FakeRedis()
+    fake_redis.store["question: What is pod?"] = json.dumps({"answer": "stale"})
 
-    with patch("app.services.rag_service.redis_client", redis):
+    with patch("app.core.cache.redis_client", fake_redis):
         response = client.post("/ask-doc", json={"question": "What is pod?"})
 
     assert response.json()["response"] == {"answer": "Pods are containers"}
     assert "cached" not in response.json()
     assert mock_ask_llm.await_count == 1
+
+
+class DownRedis:
+    def __init__(self):
+        self.calls = 0
+
+    def get(self, key):
+        self.calls += 1
+        raise redis.ConnectionError("Error -2 connecting to redis:6379. Name or service not known.")
+
+    def setex(self, key, ttl, value):
+        self.calls += 1
+        raise redis.ConnectionError("Error -2 connecting to redis:6379. Name or service not known.")
+
+
+@patch("app.services.rag_service.get_retriever", side_effect=fake_retriever)
+@patch("app.services.rag_service.ask_llm", new_callable=AsyncMock)
+def test_answers_when_redis_is_down(mock_ask_llm, mock_get_retriever):
+    mock_ask_llm.return_value = {"answer": "Pods are containers"}
+
+    with patch("app.core.cache.redis_client", DownRedis()):
+        response = client.post("/ask-doc", json={"question": "What is pod?"})
+
+    assert response.status_code == 200
+    assert "error" not in response.json()
+    assert response.json()["response"] == {"answer": "Pods are containers"}
+    assert response.json()["sources"] == [{"file": "k8s.pdf", "page": 2}]
+
+
+@patch("app.services.rag_service.get_retriever", side_effect=fake_retriever)
+@patch("app.services.rag_service.ask_llm", new_callable=AsyncMock)
+def test_skips_redis_for_a_while_after_a_failure(mock_ask_llm, mock_get_retriever):
+    mock_ask_llm.return_value = {"answer": "Pods are containers"}
+    down = DownRedis()
+
+    with patch("app.core.cache.redis_client", down):
+        client.post("/ask-doc", json={"question": "What is pod?"})
+        client.post("/ask-doc", json={"question": "What is a node?"})
+
+    # Only the first lookup reaches Redis; the rest are skipped during the backoff
+    assert down.calls == 1

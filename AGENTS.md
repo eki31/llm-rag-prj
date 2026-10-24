@@ -59,8 +59,9 @@ There is no linter or formatter configured yet.
 
 ## Gotchas
 
-- The Redis host is hard-coded to `redis` in `app/core/cache.py`, which only resolves inside Docker Compose.
-  Running the API outside Compose makes `/ask-doc` fail on the cache lookup.
+- Redis is optional. `REDIS_HOST` defaults to `redis`, which only resolves inside Docker Compose; set `REDIS_HOST=localhost` for local runs.
+  If Redis is unreachable, `/ask-doc` still answers without the cache and Redis is skipped for 30 seconds before retrying.
+  Always go through `cache_get` and `cache_set` in `app/core/cache.py`, never `redis_client` directly.
 - The README's "cd app; uvicorn main:app" instruction is outdated and breaks the `app.` imports. Use the root command above.
 - `app/uploads/` and `app/vector_db/` are runtime data, git-ignored and mounted as Docker volumes. Don't commit them.
 - The Docker image installs CPU-only PyTorch on purpose to keep it small. Don't switch it to the default CUDA build.

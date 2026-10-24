@@ -3,7 +3,7 @@ from app.rag.retriever import get_retriever
 from app.services.openrouter_service import ask_llm
 from app.core.logger import logger
 from app.core.memory import conversation_memory
-from app.core.cache import redis_client
+from app.core.cache import cache_get, cache_set
 from app.core.metrics import RAG_REQUEST_COUNT, CACHE_HITS, CACHE_MISSES, OPENROUTER_CALLS
 
 
@@ -21,7 +21,7 @@ async def ask_document(question: str):
             }
 
         cache_key = f"question: {question}"
-        cached_payload = redis_client.get(cache_key)
+        cached_payload = cache_get(cache_key)
         if cached_payload:
             cached = json.loads(cached_payload)
             # Entries written before sources were cached hold only the answer; treat them as a miss
@@ -97,7 +97,7 @@ Question:
 
         # Don't cache failed LLM calls, or the error would be served for the next hour
         if "error" not in response:
-            redis_client.setex(cache_key, 3600, json.dumps(result))
+            cache_set(cache_key, 3600, json.dumps(result))
 
         return result
     except Exception as e:
